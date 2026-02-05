@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - HASysTray</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 24px;
+            -webkit-app-region: drag;
+        }
+
+        h1 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h1::before {
+            content: '⚙️';
+        }
+
+        .settings-group {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            -webkit-app-region: no-drag;
+        }
+
+        .settings-group h2 {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #41bdf5;
+            margin-bottom: 12px;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .setting-row:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .setting-row:first-of-type {
+            padding-top: 0;
+        }
+
+        .setting-label {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .setting-label span {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .setting-label small {
+            font-size: 11px;
+            color: #888;
+        }
+
+        /* Toggle Switch */
+        .toggle {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            cursor: pointer;
+        }
+
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #3a3a4a;
+            border-radius: 24px;
+            transition: 0.2s;
+        }
+
+        .toggle-slider::before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            border-radius: 50%;
+            transition: 0.2s;
+        }
+
+        .toggle input:checked+.toggle-slider {
+            background-color: #41bdf5;
+        }
+
+        .toggle input:checked+.toggle-slider::before {
+            transform: translateX(20px);
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 24px;
+            -webkit-app-region: no-drag;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        button.primary {
+            background: #41bdf5;
+            color: #000;
+        }
+
+        button.primary:hover {
+            background: #5bcfff;
+        }
+
+        button.secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #e0e0e0;
+        }
+
+        button.secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .version {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 11px;
+            color: #555;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Settings</h1>
+
+    <div class="settings-group">
+        <h2>Startup</h2>
+        <div class="setting-row">
+            <div class="setting-label">
+                <span>Start with Windows</span>
+                <small>Launch HASysTray when you log in</small>
+            </div>
+            <label class="toggle">
+                <input type="checkbox" id="startWithWindows">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <div class="buttons">
+        <button class="secondary" id="cancelBtn">Cancel</button>
+        <button class="primary" id="saveBtn">Save</button>
+    </div>
+
+    <div class="version">HASysTray v1.0.0</div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+
+        // Load current settings
+        ipcRenderer.invoke('get-settings').then(settings => {
+            document.getElementById('startWithWindows').checked = settings.startWithWindows || false;
+        });
+
+        // Save button
+        document.getElementById('saveBtn').addEventListener('click', () => {
+            const settings = {
+                startWithWindows: document.getElementById('startWithWindows').checked
+            };
+            ipcRenderer.invoke('save-settings', settings).then(() => {
+                window.close();
+            });
+        });
+
+        // Cancel button
+        document.getElementById('cancelBtn').addEventListener('click', () => {
+            window.close();
+        });
+
+        // ESC to close
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') window.close();
+        });
+    </script>
+</body>
+
+</html>
