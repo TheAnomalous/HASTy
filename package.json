@@ -1,16 +1,45 @@
 {
-  "name": "hasystray",
+  "name": "hasty",
   "version": "1.0.0",
   "description": "Home Assistant Dashboard System Tray App",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "electron ."
+    "dev": "electron .",
+    "build": "electron-builder --win"
   },
-  "keywords": ["home-assistant", "systray", "dashboard"],
+  "keywords": [
+    "home-assistant",
+    "systray",
+    "dashboard"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^34.0.0"
+    "electron": "^34.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.hasty.app",
+    "productName": "HASTy",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "settings.html",
+      "setup.html",
+      "128 House.ico"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "HASTy"
+    }
   }
 }

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Settings - HASysTray</title>
+    <title>Settings - HASTy</title>
     <style>
         * {
             margin: 0;
@@ -19,33 +19,67 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             color: #e0e0e0;
-            min-height: 100vh;
-            padding: 24px;
+            padding: 20px;
             -webkit-app-region: drag;
         }
 
+        /* Theme backgrounds */
+        body.theme-dark,
+        body.theme-system {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        body.theme-medium {
+            background: linear-gradient(135deg, #2d3748 0%, #3d4f5f 100%);
+        }
+
+        body.theme-light {
+            background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+            color: #1e293b;
+        }
+
         h1 {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 600;
-            margin-bottom: 24px;
+            margin-bottom: 16px;
             color: #ffffff;
             display: flex;
             align-items: center;
             gap: 10px;
         }
 
+        body.theme-light h1 {
+            color: #1e293b;
+        }
+
         h1::before {
             content: '⚙️';
         }
 
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
         .settings-group {
             background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.03);
             border-radius: 12px;
             padding: 16px;
-            margin-bottom: 16px;
             -webkit-app-region: no-drag;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .settings-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        body.theme-light .settings-group {
+            background: rgba(0, 0, 0, 0.05);
         }
 
         .settings-group h2 {
@@ -57,12 +91,20 @@
             margin-bottom: 12px;
         }
 
+        body.theme-light .settings-group h2 {
+            color: #0284c7;
+        }
+
         .setting-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 12px 0;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        body.theme-light .setting-row {
+            border-bottom-color: rgba(0, 0, 0, 0.08);
         }
 
         .setting-row:last-child {
@@ -85,9 +127,17 @@
             font-weight: 500;
         }
 
+        body.theme-light .setting-label span {
+            color: #1e293b;
+        }
+
         .setting-label small {
             font-size: 11px;
             color: #888;
+        }
+
+        body.theme-light .setting-label small {
+            color: #475569;
         }
 
         /* Toggle Switch */
@@ -139,8 +189,12 @@
             display: flex;
             justify-content: flex-end;
             gap: 12px;
-            margin-top: 24px;
+            margin-top: 12px;
+            margin-bottom: 32px;
             -webkit-app-region: no-drag;
+            position: relative;
+            z-index: 1001;
+            /* Above footer */
         }
 
         button {
@@ -171,11 +225,252 @@
             background: rgba(255, 255, 255, 0.15);
         }
 
-        .version {
-            text-align: center;
-            margin-top: 24px;
+        button.small {
+            padding: 6px 12px;
             font-size: 11px;
-            color: #555;
+        }
+
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            background: rgba(15, 23, 42, 0.98);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            -webkit-app-region: no-drag;
+            backdrop-filter: blur(15px);
+            z-index: 1000;
+        }
+
+        body.theme-light .footer {
+            background: rgba(255, 255, 255, 0.98);
+            border-top-color: rgba(0, 0, 0, 0.08);
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.08);
+        }
+
+        body.theme-medium .footer {
+            background: rgba(30, 41, 59, 0.98);
+        }
+
+        .version {
+            font-size: 11px;
+            font-weight: 700;
+            color: #64748b;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+        }
+
+        .credits {
+            font-size: 11px;
+            color: #888;
+        }
+
+        .credits a {
+            color: #41bdf5;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .credits a:hover {
+            text-decoration: underline;
+        }
+
+        body.theme-light .version {
+            color: #94a3b8;
+        }
+
+        body.theme-light .credits {
+            color: #64748b;
+        }
+
+        body.theme-light .credits a {
+            color: #0284c7;
+        }
+
+        /* Ensure content doesn't get hidden under fixed footer */
+        body {
+            padding-bottom: 110px !important;
+        }
+
+
+
+        .text-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            color: #e0e0e0;
+            font-size: 13px;
+            font-family: inherit;
+            margin-top: 8px;
+        }
+
+        .text-input.recording {
+            border-color: #41bdf5;
+            background: rgba(65, 189, 245, 0.1);
+            color: #41bdf5;
+            box-shadow: 0 0 10px rgba(65, 189, 245, 0.2);
+        }
+
+        .text-input:focus {
+            outline: none;
+            border-color: #41bdf5;
+        }
+
+        .text-input::placeholder {
+            color: #666;
+        }
+
+        .setting-row.column {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        select {
+            padding: 10px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            color: #e0e0e0;
+            font-size: 13px;
+            font-family: inherit;
+            cursor: pointer;
+            min-width: 120px;
+        }
+
+        body.theme-light select {
+            background: rgba(255, 255, 255, 0.8);
+            border-color: rgba(0, 0, 0, 0.15);
+            color: #1e293b;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #41bdf5;
+        }
+
+        body.theme-light select:focus {
+            border-color: #0284c7;
+        }
+
+        select option {
+            background: #1a1a2e;
+            color: #e0e0e0;
+        }
+
+        body.theme-light select option {
+            background: #ffffff;
+            color: #1e293b;
+        }
+
+        body.theme-light .text-input {
+            background: rgba(255, 255, 255, 0.8);
+            border-color: rgba(0, 0, 0, 0.15);
+            color: #1e293b;
+        }
+
+        body.theme-light .text-input:focus {
+            border-color: #0284c7;
+        }
+
+        body.theme-light .text-input::placeholder {
+            color: #64748b;
+        }
+
+        body.theme-light button.secondary {
+            background: rgba(0, 0, 0, 0.08);
+            color: #1e293b;
+        }
+
+        body.theme-light button.secondary:hover {
+            background: rgba(0, 0, 0, 0.12);
+        }
+
+        body.theme-light .version {
+            color: #64748b;
+        }
+
+        .hotkey-input-wrapper {
+            display: flex;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 4px;
+            -webkit-app-region: no-drag;
+            transition: border-color 0.2s;
+        }
+
+        .hotkey-input-wrapper:focus-within {
+            border-color: #41bdf5;
+        }
+
+        body.theme-light .hotkey-input-wrapper {
+            background: rgba(255, 255, 255, 0.5);
+            border-color: rgba(0, 0, 0, 0.1);
+        }
+
+        body.theme-light .hotkey-input-wrapper:focus-within {
+            border-color: #0284c7;
+        }
+
+        .hotkey-input {
+            flex: 1;
+            padding: 8px 10px;
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-family: inherit;
+            font-size: 13px;
+            text-align: center;
+            cursor: pointer;
+            outline: none;
+        }
+
+
+
+        .hotkey-input::placeholder {
+            color: #666;
+        }
+
+        body.theme-light .hotkey-input {
+            color: #1e293b;
+        }
+
+        body.theme-light .hotkey-input::placeholder {
+            color: #94a3b8;
+        }
+
+        .clear-btn {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 4px;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .clear-btn:hover {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        body.theme-light .clear-btn {
+            background: rgba(0, 0, 0, 0.08);
+            color: #64748b;
+        }
+
+        body.theme-light .clear-btn:hover {
+            background: rgba(239, 68, 68, 0.15);
+            color: #dc2626;
         }
     </style>
 </head>
@@ -183,53 +478,316 @@
 <body>
     <h1>Settings</h1>
 
-    <div class="settings-group">
-        <h2>Startup</h2>
-        <div class="setting-row">
+    <div class="settings-group full-width" style="margin-bottom: 16px;">
+        <h2>Dashboard</h2>
+        <div class="setting-row column">
             <div class="setting-label">
-                <span>Start with Windows</span>
-                <small>Launch HASysTray when you log in</small>
+                <span>Home Assistant URL</span>
+                <small>Full URL to your dashboard (e.g., http://homeassistant.local:8123)</small>
             </div>
-            <label class="toggle">
-                <input type="checkbox" id="startWithWindows">
-                <span class="toggle-slider"></span>
-            </label>
+            <input type="text" class="text-input" id="dashboardUrl"
+                placeholder="http://homeassistant.local:8123/lovelace/0">
+        </div>
+    </div>
+
+    <div class="settings-grid">
+        <!-- Left Column: Window -->
+        <div class="settings-group">
+            <h2>Window</h2>
+            <div class="setting-row">
+                <div class="setting-label">
+                    <span>Auto-hide</span>
+                    <small>Hide when clicking away</small>
+                </div>
+                <label class="toggle">
+                    <input type="checkbox" id="autoHide">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="setting-row">
+                <div class="setting-label">
+                    <span>Resizable</span>
+                    <small>Drag edges to resize</small>
+                </div>
+                <label class="toggle">
+                    <input type="checkbox" id="allowResize">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="setting-row">
+                <div class="setting-label">
+                    <span id="currentSize">320 × 600</span>
+                </div>
+                <button class="secondary small" id="restoreDefaultsBtn">Reset</button>
+            </div>
+        </div>
+
+        <!-- Right Column: Appearance, Hotkey, Startup -->
+        <div class="settings-group">
+            <h2>Appearance</h2>
+            <div class="setting-row" style="border-bottom: none; padding-bottom: 12px;">
+                <select id="theme" style="flex: 1; max-width: 100%;">
+                    <option value="system">System</option>
+                    <option value="light">Light</option>
+                    <option value="medium">Medium</option>
+                    <option value="dark">Dark</option>
+                </select>
+            </div>
+
+            <h2 style="margin-top: 16px;">Hotkey</h2>
+            <div class="hotkey-input-wrapper" style="margin-bottom: 20px;">
+                <input type="text" class="hotkey-input" id="hotkey" placeholder="Click to set..." style="flex: 1;">
+                <button class="clear-btn" id="clearHotkey" title="Clear">✕</button>
+            </div>
+
+            <div class="setting-row" style="border-bottom: none; padding-bottom: 0; margin-top: 16px;">
+                <div class="setting-label">
+                    <span>Launch at Startup</span>
+                </div>
+                <label class="toggle">
+                    <input type="checkbox" id="startWithWindows">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
         </div>
     </div>
 
     <div class="buttons">
-        <button class="secondary" id="cancelBtn">Cancel</button>
-        <button class="primary" id="saveBtn">Save</button>
+        <button class="primary" id="closeBtn">Close</button>
     </div>
 
-    <div class="version">HASysTray v1.0.0</div>
+    <div class="footer">
+        <div class="version">HASTy v1.0.0</div>
+        <div class="credits">
+            by <a href="https://github.com/TheAnomalous" id="githubLink">TheAnomalous</a> ·
+            <a href="https://github.com/TheAnomalous/HASTy" id="repoLink">GitHub</a>
+        </div>
+    </div>
 
     <script>
         const { ipcRenderer } = require('electron');
 
+        function updateSizeDisplay(w, h) {
+            document.getElementById('currentSize').textContent = `${w} × ${h}`;
+        }
+
+        function formatHotkeyDisplay(accelerator) {
+            if (!accelerator) return 'None';
+            return accelerator
+                .replace(/CommandOrControl/g, 'Ctrl')
+                .replace(/Control/g, 'Ctrl')
+                .replace(/Command/g, 'Cmd')
+                .replace(/\+/g, ' + ');
+        }
+
         // Load current settings
         ipcRenderer.invoke('get-settings').then(settings => {
+            document.getElementById('dashboardUrl').value = settings.dashboardUrl || '';
+            document.getElementById('theme').value = settings.theme || 'system';
             document.getElementById('startWithWindows').checked = settings.startWithWindows || false;
-        });
+            document.getElementById('allowResize').checked = settings.allowResize || false;
+            document.getElementById('autoHide').checked = settings.autoHide !== undefined ? settings.autoHide : true;
+            document.getElementById('hotkey').value = formatHotkeyDisplay(settings.hotkey || '');
+            document.getElementById('hotkey').dataset.accelerator = settings.hotkey || '';
+            // Update size display
+            updateSizeDisplay(settings.windowWidth, settings.windowHeight);
 
-        // Save button
-        document.getElementById('saveBtn').addEventListener('click', () => {
-            const settings = {
-                startWithWindows: document.getElementById('startWithWindows').checked
-            };
-            ipcRenderer.invoke('save-settings', settings).then(() => {
-                window.close();
+            // Apply effective theme (resolved system theme) to settings panel
+            document.body.className = 'theme-' + (settings.effectiveTheme || 'dark');
+
+            // Now that content is set up, resize window to fit and show it
+            requestAnimationFrame(() => {
+                ipcRenderer.invoke('resize-settings-window', true);
             });
         });
 
-        // Cancel button
-        document.getElementById('cancelBtn').addEventListener('click', () => {
+        // Update display when main window is resized
+        ipcRenderer.on('window-resized', (event, size) => {
+            updateSizeDisplay(size.width, size.height);
+        });
+
+        // Update theme when changed in main process (for system theme sync)
+        ipcRenderer.on('theme-updated', (event, theme) => {
+            document.body.className = 'theme-' + theme;
+        });
+
+        // Select all when clicking URL field
+        document.getElementById('dashboardUrl').addEventListener('focus', (e) => {
+            e.target.select();
+        });
+
+        // Toggle size row when resize checkbox changes - apply in real-time
+        document.getElementById('allowResize').addEventListener('change', (e) => {
+            // Apply immediately
+            ipcRenderer.invoke('set-allow-resize', e.target.checked);
+        });
+
+        // Toggle autohide
+        document.getElementById('autoHide').addEventListener('change', (e) => {
+            ipcRenderer.invoke('save-settings', { autoHide: e.target.checked });
+        });
+
+        // Restore defaults button
+        document.getElementById('restoreDefaultsBtn').addEventListener('click', () => {
+            ipcRenderer.invoke('restore-window-defaults').then(result => {
+                updateSizeDisplay(result.width, result.height);
+            });
+        });
+
+        // Live preview theme on change - for 'system' we need to resolve it
+        document.getElementById('theme').addEventListener('change', (e) => {
+            const value = e.target.value;
+            if (value === 'system') {
+                // Ask main process for resolved theme
+                ipcRenderer.invoke('get-settings').then(s => {
+                    document.body.className = 'theme-' + s.effectiveTheme;
+                });
+            } else {
+                document.body.className = 'theme-' + value;
+            }
+        });
+
+        // Hotkey capture
+        const hotkeyInput = document.getElementById('hotkey');
+
+        // Visual feedback when clicking hotkey field
+        hotkeyInput.addEventListener('focus', () => {
+            hotkeyInput.value = 'Press keys...';
+            hotkeyInput.classList.add('recording');
+        });
+
+        hotkeyInput.addEventListener('blur', () => {
+            hotkeyInput.value = formatHotkeyDisplay(hotkeyInput.dataset.accelerator || '');
+            hotkeyInput.classList.remove('recording');
+        });
+
+        // Prevent any text input
+        hotkeyInput.addEventListener('input', (e) => {
+            e.target.value = formatHotkeyDisplay(e.target.dataset.accelerator || '');
+        });
+
+        hotkeyInput.addEventListener('keydown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Ignore standalone modifier keys - show what's being held
+            if (['Control', 'Shift', 'Alt', 'Meta', 'CapsLock'].includes(e.key)) {
+                const held = [];
+                if (e.ctrlKey || e.metaKey) held.push('Ctrl');
+                if (e.altKey) held.push('Alt');
+                if (e.shiftKey) held.push('Shift');
+                hotkeyInput.value = held.length > 0 ? held.join(' + ') + ' + ...' : 'Press keys...';
+                return;
+            }
+
+            // Build accelerator string
+            const parts = [];
+            if (e.ctrlKey || e.metaKey) parts.push('CommandOrControl');
+            if (e.altKey) parts.push('Alt');
+            if (e.shiftKey) parts.push('Shift');
+
+            // Map special keys to Electron accelerator names
+            const keyMap = {
+                'ARROWUP': 'Up',
+                'ARROWDOWN': 'Down',
+                'ARROWLEFT': 'Left',
+                'ARROWRIGHT': 'Right',
+                ' ': 'Space',
+                'ESCAPE': 'Escape',
+                'ENTER': 'Return',
+                'BACKSPACE': 'Backspace',
+                'DELETE': 'Delete',
+                'INSERT': 'Insert',
+                'HOME': 'Home',
+                'END': 'End',
+                'PAGEUP': 'PageUp',
+                'PAGEDOWN': 'PageDown',
+                'TAB': 'Tab',
+                '.': '.',
+                ',': ',',
+                '/': '/',
+                '\\': '\\',
+                '[': '[',
+                ']': ']',
+                ';': ';',
+                '\'': '\'',
+                '=': '=',
+                '-': '-'
+            };
+
+            // Get the key
+            let key = e.key.toUpperCase();
+            key = keyMap[key] || key;
+
+            // Handle F1-F24
+            if (/^F\d{1,2}$/.test(key)) {
+                // Already correct format
+            } else if (key.length === 1) {
+                key = key.toUpperCase();
+            }
+
+            parts.push(key);
+
+            const accelerator = parts.join('+');
+
+            // Try to register it
+            ipcRenderer.invoke('set-hotkey', accelerator).then(success => {
+                if (success) {
+                    hotkeyInput.value = formatHotkeyDisplay(accelerator);
+                    hotkeyInput.dataset.accelerator = accelerator;
+                    hotkeyInput.blur();
+                } else {
+                    hotkeyInput.value = 'Failed: ' + formatHotkeyDisplay(accelerator);
+                    setTimeout(() => {
+                        hotkeyInput.value = formatHotkeyDisplay(hotkeyInput.dataset.accelerator);
+                    }, 2000);
+                }
+            });
+        });
+
+        // Clear hotkey button
+        document.getElementById('clearHotkey').addEventListener('click', () => {
+            ipcRenderer.invoke('set-hotkey', '').then(() => {
+                hotkeyInput.value = '';
+                hotkeyInput.dataset.accelerator = '';
+            });
+        });
+
+        // Real-time save for URL (on blur)
+        document.getElementById('dashboardUrl').addEventListener('blur', () => {
+            const url = document.getElementById('dashboardUrl').value.trim();
+            if (url) {
+                ipcRenderer.invoke('save-settings', { dashboardUrl: url });
+            }
+        });
+
+        // Real-time save for theme
+        document.getElementById('theme').addEventListener('change', (e) => {
+            ipcRenderer.invoke('save-settings', { theme: e.target.value });
+        });
+
+        // Real-time save for start with Windows
+        document.getElementById('startWithWindows').addEventListener('change', (e) => {
+            ipcRenderer.invoke('save-settings', { startWithWindows: e.target.checked });
+        });
+
+        // Close button
+        document.getElementById('closeBtn').addEventListener('click', () => {
             window.close();
         });
 
         // ESC to close
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') window.close();
+        });
+
+        // Open external links in browser
+        const { shell } = require('electron');
+        document.querySelectorAll('.credits a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                shell.openExternal(link.href);
+            });
         });
     </script>
 </body>

@@ -1,13 +1,13 @@
-const { app, BrowserWindow, Tray, Menu, screen, nativeImage, nativeTheme, ipcMain } = require('electron');
+const { app, BrowserWindow, Tray, Menu, screen, nativeImage, nativeTheme, ipcMain, globalShortcut } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
-// Configuration
-const TARGET_URL = 'http://aiboard-73c4.local:8123/adam-s-dashboard/0';
+// Default configuration
+const DEFAULT_URL = 'http://homeassistant.local:8123';
 
-// Phone-like dimensions
-const WINDOW_WIDTH = 320;
-const WINDOW_HEIGHT = 600;
+// Default phone-like dimensions
+const DEFAULT_WIDTH = 320;
+const DEFAULT_HEIGHT = 600;
 
 // Animation settings
 const FADE_DURATION = 25; // ms
@@ -21,8 +21,14 @@ let mainWindow = null;
 let settingsWindow = null;
 let isVisible = false;
 let isAnimating = false;
-let currentTheme = 'system';
-let startWithWindows = false;
+let currentTheme = 'medium';
+let startWithWindows = true;
+let dashboardUrl = DEFAULT_URL;
+let allowResize = false;
+let autoHide = true;
+let windowWidth = DEFAULT_WIDTH;
+let windowHeight = DEFAULT_HEIGHT;
+let hotkey = ''; // e.g., 'CommandOrControl+Shift+H'
 
 // Theme definitions - CSS to inject into the page
 const THEME_CSS = {
@@ -78,8 +84,14 @@ function loadSettings() {
     try {
         if (fs.existsSync(SETTINGS_PATH)) {
             const data = JSON.parse(fs.readFileSync(SETTINGS_PATH, 'utf8'));
-            currentTheme = data.theme || 'system';
-            startWithWindows = data.startWithWindows || false;
+            currentTheme = data.theme || 'medium';
+            startWithWindows = data.startWithWindows !== undefined ? data.startWithWindows : true;
+            dashboardUrl = data.dashboardUrl || DEFAULT_URL;
+            allowResize = data.allowResize || false;
+            windowWidth = data.windowWidth || DEFAULT_WIDTH;
+            windowHeight = data.windowHeight || DEFAULT_HEIGHT;
+            hotkey = data.hotkey || '';
+            autoHide = data.autoHide !== undefined ? data.autoHide : true;
         }
     } catch (e) {
         console.error('Failed to load settings:', e);
@@ -90,19 +102,56 @@ function saveSettings() {
     try {
         fs.writeFileSync(SETTINGS_PATH, JSON.stringify({
             theme: currentTheme,
-            startWithWindows: startWithWindows
+            startWithWindows: startWithWindows,
+            dashboardUrl: dashboardUrl,
+            allowResize: allowResize,
+            windowWidth: windowWidth,
+            windowHeight: windowHeight,
+            hotkey: hotkey,
+            autoHide: autoHide
         }), 'utf8');
     } catch (e) {
         console.error('Failed to save settings:', e);
     }
 }
 
+function registerHotkey(newHotkey) {
+    // Unregister existing hotkey
+    globalShortcut.unregisterAll();
+
+    if (newHotkey && newHotkey.trim()) {
+        try {
+            const success = globalShortcut.register(newHotkey, () => {
+                if (tray) {
+                    toggleWindow(tray.getBounds());
+                }
+            });
+            if (!success) {
+                console.error('[Hotkey] Registration failed for:', newHotkey);
+                return false;
+            }
+            return true;
+        } catch (e) {
+            console.error('[Hotkey] Invalid hotkey error:', e);
+            return false;
+        }
+    }
+    return true;
+}
+
 function applyStartupSetting() {
-    app.setLoginItemSettings({
+    const settings = {
         openAtLogin: startWithWindows,
-        path: process.execPath,
-        args: []
-    });
+        path: process.execPath
+    };
+
+    // In dev mode, electron.exe needs the app directory as an argument
+    // In packaged builds, the exe already knows its app path
+    if (!app.isPackaged) {
+        settings.args = [path.resolve(__dirname)];
+    }
+
+    app.setLoginItemSettings(settings);
 }
 
 function getEffectiveTheme() {
@@ -113,13 +162,19 @@ function getEffectiveTheme() {
 }
 
 function applyTheme() {
-    if (!mainWindow) return;
     const effectiveTheme = getEffectiveTheme();
     const bgColor = THEME_BACKGROUNDS[effectiveTheme] || THEME_BACKGROUNDS.dark;
-    mainWindow.setBackgroundColor(bgColor);
-    const css = THEME_CSS[effectiveTheme];
-    if (css) {
-        mainWindow.webContents.insertCSS(css).catch(() => { });
+
+    if (mainWindow) {
+        mainWindow.setBackgroundColor(bgColor);
+        const css = THEME_CSS[effectiveTheme];
+        if (css) {
+            mainWindow.webContents.insertCSS(css).catch(() => { });
+        }
+    }
+
+    if (settingsWindow) {
+        settingsWindow.webContents.send('theme-updated', effectiveTheme);
     }
 }
 
@@ -144,26 +199,96 @@ function createWindow() {
     const effectiveTheme = getEffectiveTheme();
     const bgColor = THEME_BACKGROUNDS[effectiveTheme] || THEME_BACKGROUNDS.dark;
 
+    console.log(`[Window] Creating with size: ${windowWidth}x${windowHeight} (Resizable: ${allowResize})`);
     mainWindow = new BrowserWindow({
-        width: WINDOW_WIDTH,
-        height: WINDOW_HEIGHT,
+        width: windowWidth,
+        height: windowHeight,
+        useContentSize: true,
         show: false,
         frame: false,
-        resizable: false,
+        resizable: allowResize,
         skipTaskbar: true,
         alwaysOnTop: true,
         transparent: false,
         backgroundColor: bgColor,
+        minWidth: 280,
+        minHeight: 400,
         webPreferences: {
-            nodeIntegration: false,
-            contextIsolation: true,
+            nodeIntegration: true,
+            contextIsolation: false,
         }
     });
 
-    mainWindow.loadURL(TARGET_URL);
+    // Save window size when resized with debounce and jitter guard
+    let resizeTimeout;
+    mainWindow.on('resize', () => {
+        if (allowResize && !mainWindow.isMinimized()) {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                const [w, h] = mainWindow.getContentSize();
+
+                // Jitter guard: Only save if changed by more than 2 pixels
+                // This prevents the "2px creep" on Windows frameless windows
+                const widthDiff = Math.abs(w - windowWidth);
+                const heightDiff = Math.abs(h - windowHeight);
+
+                if (widthDiff > 2 || heightDiff > 2) {
+                    console.log(`[Size] Significant change detected: ${windowWidth}x${windowHeight} -> ${w}x${h}`);
+                    windowWidth = w;
+                    windowHeight = h;
+                    saveSettings();
+
+                    // Notify settings window if open so it can update its display
+                    if (settingsWindow) {
+                        settingsWindow.webContents.send('window-resized', { width: w, height: h });
+                    }
+                } else if (widthDiff > 0 || heightDiff > 0) {
+                    console.log(`[Size] Ignoring minor jitter: ${w}x${h} (Current: ${windowWidth}x${windowHeight})`);
+                }
+            }, 500); // 500ms debounce
+        }
+    });
+
+    // Show setup page if URL not configured, otherwise load dashboard
+    if (!dashboardUrl || dashboardUrl === DEFAULT_URL) {
+        mainWindow.loadFile('setup.html');
+    } else {
+        mainWindow.loadURL(dashboardUrl);
+    }
 
     mainWindow.webContents.on('did-finish-load', () => {
-        applyTheme();
+        // Only apply theme to actual dashboard, not setup page
+        if (dashboardUrl && dashboardUrl !== DEFAULT_URL) {
+            applyTheme();
+        }
+
+        // Inject resize grip if resizable
+        if (allowResize) {
+            mainWindow.webContents.insertCSS(`
+                .ha-systray-resize-grip {
+                    position: fixed;
+                    bottom: 0;
+                    right: 0;
+                    width: 20px;
+                    height: 20px;
+                    cursor: se-resize;
+                    -webkit-app-region: no-drag;
+                    z-index: 999999;
+                    background: linear-gradient(135deg, transparent 50%, rgba(128,128,128,0.5) 50%);
+                    border-radius: 0 0 4px 0;
+                }
+                .ha-systray-resize-grip:hover {
+                    background: linear-gradient(135deg, transparent 50%, rgba(65,189,245,0.7) 50%);
+                }
+            `).catch(() => { });
+            mainWindow.webContents.executeJavaScript(`
+                if (!document.querySelector('.ha-systray-resize-grip')) {
+                    const grip = document.createElement('div');
+                    grip.className = 'ha-systray-resize-grip';
+                    document.body.appendChild(grip);
+                }
+            `).catch(() => { });
+        }
     });
 
     // Escape to hide
@@ -174,6 +299,8 @@ function createWindow() {
     });
 
     mainWindow.on('blur', () => {
+        // Don't hide if autoHide is disabled
+        if (!autoHide) return;
         hideWindow();
     });
 
@@ -189,8 +316,8 @@ function updateTrayMenu() {
     if (!tray) return;
     const contextMenu = Menu.buildFromTemplate([
         {
-            label: 'Show Dashboard',
-            click: () => { if (!isVisible) toggleWindow(tray.getBounds()); }
+            label: 'Quit',
+            click: () => { app.isQuitting = true; app.quit(); }
         },
         {
             label: 'Reload',
@@ -198,22 +325,8 @@ function updateTrayMenu() {
         },
         { type: 'separator' },
         {
-            label: 'Theme',
-            submenu: [
-                { label: 'System', type: 'radio', checked: currentTheme === 'system', click: () => setTheme('system') },
-                { label: 'Light', type: 'radio', checked: currentTheme === 'light', click: () => setTheme('light') },
-                { label: 'Medium', type: 'radio', checked: currentTheme === 'medium', click: () => setTheme('medium') },
-                { label: 'Dark', type: 'radio', checked: currentTheme === 'dark', click: () => setTheme('dark') }
-            ]
-        },
-        { type: 'separator' },
-        {
             label: 'Settings',
             click: () => openSettings()
-        },
-        {
-            label: 'Quit',
-            click: () => { app.isQuitting = true; app.quit(); }
         }
     ]);
     tray.setContextMenu(contextMenu);
@@ -298,6 +411,10 @@ function showWindow(trayBounds) {
     mainWindow.setPosition(x, y, false);
     mainWindow.setOpacity(0);
     mainWindow.show();
+
+    // Re-enforce correct content size to prevent OS-level shifting on show
+    mainWindow.setContentSize(windowWidth, windowHeight);
+
     mainWindow.focus();
     isVisible = true;
     isAnimating = true;
@@ -349,14 +466,15 @@ function openSettings() {
     }
 
     settingsWindow = new BrowserWindow({
-        width: 360,
-        height: 280,
+        width: 500,
+        height: 450, // Initial, will adjust to content
         resizable: false,
         minimizable: false,
         maximizable: false,
         alwaysOnTop: true,
         frame: false,
         show: false,
+        useContentSize: true,
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
@@ -365,8 +483,18 @@ function openSettings() {
 
     settingsWindow.loadFile('settings.html');
 
-    settingsWindow.once('ready-to-show', () => {
-        settingsWindow.show();
+    // Window will be resized by settings.html after it loads and determines content
+
+    settingsWindow.on('blur', () => {
+        // If autoHide is enabled, hide the main window when settings also loses focus
+        // We wait a tick to see if focus went back to the main window
+        if (autoHide) {
+            setTimeout(() => {
+                if (mainWindow && !mainWindow.isFocused() && (!settingsWindow || !settingsWindow.isFocused())) {
+                    hideWindow();
+                }
+            }, 100);
+        }
     });
 
     settingsWindow.on('closed', () => {
@@ -377,15 +505,147 @@ function openSettings() {
 // IPC handlers for settings
 ipcMain.handle('get-settings', () => {
     return {
-        startWithWindows: startWithWindows
+        dashboardUrl: dashboardUrl,
+        theme: currentTheme,
+        effectiveTheme: getEffectiveTheme(),
+        startWithWindows: startWithWindows,
+        allowResize: allowResize,
+        windowWidth: windowWidth,
+        windowHeight: windowHeight,
+        defaultWidth: DEFAULT_WIDTH,
+        defaultHeight: DEFAULT_HEIGHT,
+        hotkey: hotkey,
+        autoHide: autoHide
     };
 });
 
 ipcMain.handle('save-settings', (event, settings) => {
-    startWithWindows = settings.startWithWindows;
+    const urlChanged = settings.dashboardUrl && settings.dashboardUrl !== dashboardUrl;
+    const themeChanged = settings.theme && settings.theme !== currentTheme;
+    const resizeChanged = settings.allowResize !== undefined && settings.allowResize !== allowResize;
+
+    if (settings.dashboardUrl) {
+        dashboardUrl = settings.dashboardUrl;
+    }
+    if (settings.theme) {
+        currentTheme = settings.theme;
+    }
+    if (settings.startWithWindows !== undefined) {
+        startWithWindows = settings.startWithWindows;
+    }
+    if (settings.allowResize !== undefined) {
+        allowResize = settings.allowResize;
+    }
+    if (settings.autoHide !== undefined) {
+        autoHide = settings.autoHide;
+    }
+
     saveSettings();
     applyStartupSetting();
+
+    // Apply theme if changed
+    if (themeChanged) {
+        applyTheme();
+    }
+
+    // Reload dashboard if URL changed
+    if (urlChanged && mainWindow) {
+        mainWindow.loadURL(dashboardUrl);
+    }
+
+    // Update resizable state
+    if (resizeChanged && mainWindow) {
+        mainWindow.setResizable(allowResize);
+
+        // Re-enforce clean size (turning on resizable on Windows adds frames)
+        mainWindow.setContentSize(windowWidth, windowHeight);
+    }
+
     return true;
+});
+
+// Restore default window size
+ipcMain.handle('restore-window-defaults', () => {
+    windowWidth = DEFAULT_WIDTH;
+    windowHeight = DEFAULT_HEIGHT;
+    saveSettings();
+    if (mainWindow) {
+        mainWindow.setContentSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+    }
+    return { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT };
+});
+
+// Resize settings window to fit content and show it
+ipcMain.handle('resize-settings-window', async (event, andShow = false) => {
+    if (!settingsWindow) return;
+    try {
+        const height = await settingsWindow.webContents.executeJavaScript(
+            'document.body.scrollHeight'
+        );
+        settingsWindow.setContentSize(500, Math.min(height + 20, 600));
+        if (andShow && !settingsWindow.isVisible()) {
+            settingsWindow.show();
+        }
+    } catch (e) { }
+});
+
+// Real-time toggle for resize mode
+ipcMain.handle('set-allow-resize', (event, enabled) => {
+    allowResize = enabled;
+    saveSettings();
+
+    if (mainWindow) {
+        mainWindow.setResizable(enabled);
+
+        // Inject or remove resize grip
+        if (enabled) {
+            mainWindow.webContents.insertCSS(`
+                .ha-systray-resize-grip {
+                    position: fixed;
+                    bottom: 0;
+                    right: 0;
+                    width: 20px;
+                    height: 20px;
+                    cursor: se-resize;
+                    -webkit-app-region: no-drag;
+                    z-index: 999999;
+                    background: linear-gradient(135deg, transparent 50%, rgba(128,128,128,0.5) 50%);
+                    border-radius: 0 0 4px 0;
+                }
+                .ha-systray-resize-grip:hover {
+                    background: linear-gradient(135deg, transparent 50%, rgba(65,189,245,0.7) 50%);
+                }
+            `).catch(() => { });
+            mainWindow.webContents.executeJavaScript(`
+                if (!document.querySelector('.ha-systray-resize-grip')) {
+                    const grip = document.createElement('div');
+                    grip.className = 'ha-systray-resize-grip';
+                    document.body.appendChild(grip);
+                }
+            `).catch(() => { });
+        } else {
+            mainWindow.webContents.executeJavaScript(`
+                const grip = document.querySelector('.ha-systray-resize-grip');
+                if (grip) grip.remove();
+            `).catch(() => { });
+        }
+    }
+    return true;
+});
+
+// Real-time hotkey registration
+ipcMain.handle('set-hotkey', (event, newHotkey) => {
+    const success = registerHotkey(newHotkey);
+    if (success) {
+        hotkey = newHotkey;
+        saveSettings();
+    }
+    return success;
+});
+
+// Handle open-settings from setup page
+ipcMain.on('open-settings', () => {
+    openSettings();
 });
 
 app.whenReady().then(() => {
@@ -393,10 +653,22 @@ app.whenReady().then(() => {
     applyStartupSetting();
     createWindow();
     createTray();
+    registerHotkey(hotkey);
+
+    // Listen for system theme changes
+    nativeTheme.on('updated', () => {
+        if (currentTheme === 'system') {
+            applyTheme();
+        }
+    });
+
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });
 });
 
 app.on('window-all-closed', () => { });
-app.on('before-quit', () => { app.isQuitting = true; });
+app.on('before-quit', () => {
+    globalShortcut.unregisterAll();
+    app.isQuitting = true;
+});

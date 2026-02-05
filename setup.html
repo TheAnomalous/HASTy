@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome - HASTy</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            overflow: hidden;
+            height: 100%;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #e0e0e0;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px 24px;
+            text-align: center;
+        }
+
+        /* Theme backgrounds */
+        body.theme-dark,
+        body.theme-system {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        }
+
+        body.theme-medium {
+            background: linear-gradient(135deg, #2d3748 0%, #3d4f5f 50%, #4a5568 100%);
+        }
+
+        body.theme-light {
+            background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 50%, #94a3b8 100%);
+            color: #1e293b;
+        }
+
+        .logo {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        h1 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        body.theme-dark h1,
+        body.theme-system h1,
+        body.theme-medium h1 {
+            color: #ffffff;
+        }
+
+        body.theme-light h1 {
+            color: #1e293b;
+        }
+
+        .subtitle {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 24px;
+        }
+
+        body.theme-light .subtitle {
+            color: #475569;
+        }
+
+        .steps {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            text-align: left;
+            width: 100%;
+            max-width: 260px;
+        }
+
+        body.theme-light .steps {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .step {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .step:last-child {
+            margin-bottom: 0;
+        }
+
+        .step-number {
+            width: 20px;
+            height: 20px;
+            background: #41bdf5;
+            color: #000;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .step-text {
+            font-size: 12px;
+            line-height: 1.4;
+            padding-top: 1px;
+        }
+
+        body.theme-light .step-text {
+            color: #1e293b;
+        }
+
+        .step-text strong {
+            color: #41bdf5;
+        }
+
+        body.theme-light .step-text strong {
+            color: #0284c7;
+        }
+
+        button {
+            padding: 12px 28px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: linear-gradient(135deg, #41bdf5 0%, #1e90ff 100%);
+            color: #000;
+            box-shadow: 0 4px 15px rgba(65, 189, 245, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(65, 189, 245, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+
+<body class="theme-dark">
+    <div class="logo">🏠</div>
+    <h1>Welcome to HASTy</h1>
+    <p class="subtitle">Quick access to your Home Assistant dashboard</p>
+
+    <div class="steps">
+        <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-text">Open your <strong>Home Assistant</strong> in a browser</div>
+        </div>
+        <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-text">Copy the <strong>dashboard URL</strong> from the address bar</div>
+        </div>
+        <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-text">Click <strong>Configure</strong> and paste your URL</div>
+        </div>
+    </div>
+
+    <button id="configureBtn">Configure Dashboard</button>
+
+
+
+    <script>
+        const { ipcRenderer } = require('electron');
+
+        // Get theme on load
+        ipcRenderer.invoke('get-settings').then(settings => {
+            const theme = settings.effectiveTheme || 'dark';
+            document.body.className = 'theme-' + theme;
+        });
+
+        document.getElementById('configureBtn').addEventListener('click', () => {
+            ipcRenderer.send('open-settings');
+        });
+    </script>
+</body>
+
+</html>

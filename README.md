@@ -1,14 +1,20 @@
-# HASysTray - Home Assistant System Tray Dashboard
+# HASTy - Home Assistant System Tray Dashboard
 
-A lightweight system tray application that displays your Home Assistant dashboard in a phone-sized popup window.
+A premium, lightweight system tray application that displays your Home Assistant dashboard in a sleek, customizable popup window.
+
+![HASTy v1.0.0](https://img.shields.io/badge/version-1.0.0-blue.svg)
 
 ## Features
 
-- **System Tray Integration**: Lives in your system tray, always accessible
-- **Phone Form Factor**: 19:6 aspect ratio (~320x1013px) mimics a mobile device
-- **One-Click Access**: Left-click the tray icon to toggle the dashboard
-- **Auto-Hide**: Window hides when you click outside
-- **Always on Top**: Dashboard stays above other windows when open
+- **System Tray Orchestration**: Lives in your system tray for instant, one-click access.
+- **Premium UI/UX**: High-fidelity settings menu with custom themes (System, Light, Medium, Dark).
+- **Global Hotkeys**: Robust keyboard shortcut support (e.g., `Alt + /`) to toggle the dashboard from anywhere.
+- **Smart Accessibility**:
+  - **Auto-hide**: Automatically tucks away when you click other windows (optional).
+  - **Resizable**: Drag edges to customize your dashboard size with precise content-pixel preservation.
+  - **Always on Top**: Stays above other windows for quick glances.
+- **Startup Integration**: Option to launch automatically when Windows starts.
+- **Zero-Config Landing**: Interactive setup page for your first-time installation.
 
 ## Installation
 
@@ -22,20 +28,26 @@ npm install
 npm start
 ```
 
-Or double-click `run.bat`
+Or run the development environment:
+
+```bash
+npm run dev
+```
 
 ## Configuration
 
-Edit `main.js` to change:
-- `TARGET_URL` - Your Home Assistant dashboard URL
-- `WINDOW_WIDTH` - Adjust the phone width (height auto-calculated from 19:6 ratio)
+Configuring HASTy is easy—no code editing required:
+1. Right-click the HASTy tray icon.
+2. Select **Settings**.
+3. Point to your Home Assistant URL and set your preferred hotkey and theme.
 
 ## Tray Menu (Right-click)
 
-- **Show Dashboard** - Opens the popup
-- **Reload** - Refreshes the embedded page
-- **Quit** - Exits the application
+- **Quit**: Exit the application.
+- **Reload**: Refresh the dashboard content.
+- **---**
+- **Settings**: Open the configuration panel.
 
-## Customization
+## License
 
-Place a `icon.png` file (16x16 or 32x32 pixels) in the root folder to use a custom tray icon.
+MIT - by [TheAnomalous](https://github.com/TheAnomalous)
