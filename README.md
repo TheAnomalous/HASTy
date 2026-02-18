@@ -2,7 +2,7 @@
 
 A premium, lightweight system tray application that displays your Home Assistant dashboard in a sleek, customizable popup window.
 
-![HASTy v1.0.0](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![HASTy v1.0.1](https://img.shields.io/badge/version-1.0.1-blue.svg)
 
 ## Features
 

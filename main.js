@@ -171,6 +171,11 @@ function applyTheme() {
         if (css) {
             mainWindow.webContents.insertCSS(css).catch(() => { });
         }
+
+        // Hide scrollbar but keep scroll functionality
+        mainWindow.webContents.insertCSS(`
+            *::-webkit-scrollbar { display: none; }
+        `).catch(() => { });
     }
 
     if (settingsWindow) {
@@ -262,33 +267,7 @@ function createWindow() {
             applyTheme();
         }
 
-        // Inject resize grip if resizable
-        if (allowResize) {
-            mainWindow.webContents.insertCSS(`
-                .ha-systray-resize-grip {
-                    position: fixed;
-                    bottom: 0;
-                    right: 0;
-                    width: 20px;
-                    height: 20px;
-                    cursor: se-resize;
-                    -webkit-app-region: no-drag;
-                    z-index: 999999;
-                    background: linear-gradient(135deg, transparent 50%, rgba(128,128,128,0.5) 50%);
-                    border-radius: 0 0 4px 0;
-                }
-                .ha-systray-resize-grip:hover {
-                    background: linear-gradient(135deg, transparent 50%, rgba(65,189,245,0.7) 50%);
-                }
-            `).catch(() => { });
-            mainWindow.webContents.executeJavaScript(`
-                if (!document.querySelector('.ha-systray-resize-grip')) {
-                    const grip = document.createElement('div');
-                    grip.className = 'ha-systray-resize-grip';
-                    document.body.appendChild(grip);
-                }
-            `).catch(() => { });
-        }
+
     });
 
     // Escape to hide
@@ -597,38 +576,11 @@ ipcMain.handle('set-allow-resize', (event, enabled) => {
     if (mainWindow) {
         mainWindow.setResizable(enabled);
 
-        // Inject or remove resize grip
-        if (enabled) {
-            mainWindow.webContents.insertCSS(`
-                .ha-systray-resize-grip {
-                    position: fixed;
-                    bottom: 0;
-                    right: 0;
-                    width: 20px;
-                    height: 20px;
-                    cursor: se-resize;
-                    -webkit-app-region: no-drag;
-                    z-index: 999999;
-                    background: linear-gradient(135deg, transparent 50%, rgba(128,128,128,0.5) 50%);
-                    border-radius: 0 0 4px 0;
-                }
-                .ha-systray-resize-grip:hover {
-                    background: linear-gradient(135deg, transparent 50%, rgba(65,189,245,0.7) 50%);
-                }
-            `).catch(() => { });
-            mainWindow.webContents.executeJavaScript(`
-                if (!document.querySelector('.ha-systray-resize-grip')) {
-                    const grip = document.createElement('div');
-                    grip.className = 'ha-systray-resize-grip';
-                    document.body.appendChild(grip);
-                }
-            `).catch(() => { });
-        } else {
-            mainWindow.webContents.executeJavaScript(`
-                const grip = document.querySelector('.ha-systray-resize-grip');
-                if (grip) grip.remove();
-            `).catch(() => { });
-        }
+        // Remove any leftover resize grip
+        mainWindow.webContents.executeJavaScript(`
+            const grip = document.querySelector('.ha-systray-resize-grip');
+            if (grip) grip.remove();
+        `).catch(() => { });
     }
     return true;
 });

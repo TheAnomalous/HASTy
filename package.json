@@ -1,6 +1,6 @@
 {
   "name": "hasty",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Home Assistant Dashboard System Tray App",
   "main": "main.js",
   "scripts": {
