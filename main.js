@@ -300,7 +300,16 @@ function updateTrayMenu() {
         },
         {
             label: 'Reload',
-            click: () => { if (mainWindow) mainWindow.webContents.reload(); }
+            click: () => {
+                if (!mainWindow) return;
+                // If a dashboard URL is configured, always navigate to it
+                // (fixes the case where setup.html keeps reloading instead)
+                if (dashboardUrl && dashboardUrl !== DEFAULT_URL) {
+                    mainWindow.loadURL(dashboardUrl);
+                } else {
+                    mainWindow.webContents.reload();
+                }
+            }
         },
         { type: 'separator' },
         {
@@ -499,7 +508,7 @@ ipcMain.handle('get-settings', () => {
 });
 
 ipcMain.handle('save-settings', (event, settings) => {
-    const urlChanged = settings.dashboardUrl && settings.dashboardUrl !== dashboardUrl;
+    const oldUrl = dashboardUrl;
     const themeChanged = settings.theme && settings.theme !== currentTheme;
     const resizeChanged = settings.allowResize !== undefined && settings.allowResize !== allowResize;
 
@@ -521,15 +530,25 @@ ipcMain.handle('save-settings', (event, settings) => {
 
     saveSettings();
     applyStartupSetting();
+    updateTrayMenu(); // Refresh tray so Reload uses the new URL
 
     // Apply theme if changed
     if (themeChanged) {
         applyTheme();
     }
 
-    // Reload dashboard if URL changed
-    if (urlChanged && mainWindow) {
-        mainWindow.loadURL(dashboardUrl);
+    // Navigate the main window to the dashboard URL when:
+    //  - The URL actually changed, OR
+    //  - The main window is still showing the setup page (first-run flow)
+    if (mainWindow && settings.dashboardUrl) {
+        const urlChanged = settings.dashboardUrl !== oldUrl;
+        const currentPage = mainWindow.webContents.getURL();
+        const isOnSetupPage = currentPage.startsWith('file://') && currentPage.includes('setup.html');
+
+        if (urlChanged || isOnSetupPage) {
+            console.log(`[Nav] Loading dashboard: ${dashboardUrl} (was on setup: ${isOnSetupPage}, changed: ${urlChanged})`);
+            mainWindow.loadURL(dashboardUrl);
+        }
     }
 
     // Update resizable state
@@ -558,10 +577,15 @@ ipcMain.handle('restore-window-defaults', () => {
 ipcMain.handle('resize-settings-window', async (event, andShow = false) => {
     if (!settingsWindow) return;
     try {
-        const height = await settingsWindow.webContents.executeJavaScript(
-            'document.body.scrollHeight'
-        );
-        settingsWindow.setContentSize(500, Math.min(height + 20, 600));
+        // Wait a frame for the DOM to finish layout before measuring
+        const height = await settingsWindow.webContents.executeJavaScript(`
+            new Promise(resolve => {
+                requestAnimationFrame(() => {
+                    resolve(document.body.scrollHeight);
+                });
+            });
+        `);
+        settingsWindow.setContentSize(500, Math.min(height + 20, 700));
         if (andShow && !settingsWindow.isVisible()) {
             settingsWindow.show();
         }
